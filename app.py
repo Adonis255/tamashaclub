@@ -4,57 +4,33 @@ import logging
 from datetime import datetime
 from flask import Flask, request, jsonify, render_template, session, url_for
 from flask_cors import CORS
+from supabase import create_client, Client
 from dotenv import load_dotenv
 
-# ---------- Logging ----------
+load_dotenv(dotenv_path='.env')
+
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
-# ---------- Load .env (local only) ----------
-load_dotenv(dotenv_path='.env')
-
-# ---------- Flask app ----------
 app = Flask(__name__, static_folder='static', template_folder='templates')
 app.secret_key = os.getenv('SECRET_KEY', 'dev-secret-key-change-in-production')
 CORS(app)
 
-# ---------- Supabase (safe init) ----------
+SUPABASE_URL = os.getenv('SUPABASE_URL')
+SUPABASE_KEY = os.getenv('SUPABASE_KEY')
+
 supabase = None
-try:
-    from supabase import create_client, Client
-    SUPABASE_URL = os.getenv('SUPABASE_URL')
-    SUPABASE_KEY = os.getenv('SUPABASE_KEY')
-    if SUPABASE_URL and SUPABASE_KEY:
+if SUPABASE_URL and SUPABASE_KEY:
+    try:
         supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
         logger.info("Supabase client initialized.")
-    else:
-        logger.warning("Supabase credentials missing – using mock data.")
-except Exception as e:
-    logger.error(f"Supabase init failed: {e}")
+    except Exception as e:
+        logger.error(f"Supabase init failed: {e}")
 
-# ---------- Config ----------
 ADMIN_PASSWORD = os.getenv('ADMIN_PASSWORD', 'tamasha2025')
 INACTIVITY_TIMEOUT = 300  # 5 minutes
 
-# ---------- Mock data ----------
-mock_drinks = [
-    {"id": 1, "name": "Gordon's London Dry Gin", "price": 2800, "description": "Crisp, classic London dry gin with juniper and citrus notes.", "image_url": "https://cdn.shopify.com/s/files/1/0279/5286/6392/products/gordons-gin.jpg", "category_name": "Gin", "category_id": 1},
-    {"id": 2, "name": "Johnnie Walker Black Label", "price": 4500, "description": "Smooth, smoky blended Scotch whisky with rich character.", "image_url": "https://cdn.shopify.com/s/files/1/0279/5286/6392/products/johnnie-walker-black-label.jpg", "category_name": "Whisky", "category_id": 2},
-    {"id": 3, "name": "Absolut Vodka", "price": 3200, "description": "Clean, smooth Swedish vodka with a subtle grain character.", "image_url": "https://cdn.shopify.com/s/files/1/0279/5286/6392/products/absolut-vodka.jpg", "category_name": "Vodka", "category_id": 3},
-    {"id": 4, "name": "Bacardi Superior Rum", "price": 3000, "description": "Light and smooth white rum, perfect for cocktails.", "image_url": "https://cdn.shopify.com/s/files/1/0279/5286/6392/products/bacardi-rum.jpg", "category_name": "Rum", "category_id": 4},
-]
-mock_categories = [
-    {"id": 1, "name": "Gin"},
-    {"id": 2, "name": "Whisky"},
-    {"id": 3, "name": "Vodka"},
-    {"id": 4, "name": "Rum"},
-    {"id": 5, "name": "Tequila"},
-    {"id": 6, "name": "Liqueur"},
-]
-next_drink_id = 5
-next_cat_id = 7
-
-# ---------- Helpers ----------
+# ---------- Helper functions ----------
 def admin_required():
     if 'admin' not in session:
         return False
@@ -67,6 +43,16 @@ def admin_required():
     session['last_activity'] = datetime.now().isoformat()
     return True
 
+def get_category_name(category_id):
+    if supabase:
+        try:
+            result = supabase.table('categories').select('name').eq('id', category_id).execute()
+            if result.data:
+                return result.data[0]['name']
+        except Exception as e:
+            logger.error(f"Error getting category name: {e}")
+    return "Uncategorized"
+
 # ---------- Public routes ----------
 @app.route('/')
 def index():
@@ -77,41 +63,38 @@ def get_drinks():
     search = request.args.get('search', '').strip().lower()
     category = request.args.get('category', '').strip()
 
-    if supabase:
-        try:
-            query = supabase.table('drinks').select('*, categories(name)')
-            if category:
-                query = query.eq('categories.name', category)
-            if search:
-                query = query.or_(f"name.ilike.%{search}%, description.ilike.%{search}%")
-            data = query.execute().data
-            for d in data:
-                d['category_name'] = d.pop('categories', {}).get('name', 'Uncategorized')
-            return jsonify(data)
-        except Exception as e:
-            logger.error(f"Supabase error in get_drinks: {e}")
+    if not supabase:
+        return jsonify([]), 500
 
-    # Fallback to mock
-    filtered = mock_drinks
-    if category:
-        filtered = [d for d in filtered if d['category_name'].lower() == category.lower()]
-    if search:
-        filtered = [d for d in filtered if search in d['name'].lower() or search in d['description'].lower()]
-    return jsonify(filtered)
+    try:
+        query = supabase.table('drinks').select('*, categories(name)')
+        if category:
+            query = query.eq('categories.name', category)
+        if search:
+            query = query.or_(f"name.ilike.%{search}%, description.ilike.%{search}%")
+        data = query.execute().data
+        for d in data:
+            d['category_name'] = d.pop('categories', {}).get('name', 'Uncategorized')
+        return jsonify(data)
+    except Exception as e:
+        logger.error(f"Supabase error in get_drinks: {e}")
+        return jsonify([]), 500
 
 @app.route('/api/categories')
 def get_categories():
-    if supabase:
-        try:
-            data = supabase.table('categories').select('*').execute().data
-            drink_cat_ids = set(d['category_id'] for d in mock_drinks)
-            filtered = [c for c in data if c['id'] in drink_cat_ids]
-            return jsonify(filtered)
-        except Exception as e:
-            logger.error(f"Supabase error in get_categories: {e}")
-    drink_cat_ids = set(d['category_id'] for d in mock_drinks)
-    filtered = [c for c in mock_categories if c['id'] in drink_cat_ids]
-    return jsonify(filtered)
+    if not supabase:
+        return jsonify([]), 500
+    try:
+        # Only categories that have drinks
+        data = supabase.table('categories').select('*').execute().data
+        # Get drink category IDs
+        drinks = supabase.table('drinks').select('category_id').execute().data
+        cat_ids = set(d['category_id'] for d in drinks if d['category_id'])
+        filtered = [c for c in data if c['id'] in cat_ids]
+        return jsonify(filtered)
+    except Exception as e:
+        logger.error(f"Supabase error in get_categories: {e}")
+        return jsonify([]), 500
 
 # ---------- Admin routes ----------
 @app.route('/admin')
@@ -135,7 +118,7 @@ def admin_logout():
     session.clear()
     return jsonify({'success': True})
 
-# ---------- File upload (Supabase only) ----------
+# ---------- File upload (unchanged) ----------
 @app.route('/admin/upload-image', methods=['POST'])
 def upload_image():
     if not admin_required():
@@ -147,7 +130,7 @@ def upload_image():
         return jsonify({'error': 'No file selected'}), 400
 
     if not supabase:
-        return jsonify({'error': 'Supabase not configured – upload disabled'}), 500
+        return jsonify({'error': 'Supabase not configured'}), 500
 
     ext = file.filename.rsplit('.', 1)[1].lower() if '.' in file.filename else ''
     unique_name = f"{uuid.uuid4()}.{ext}"
@@ -165,105 +148,145 @@ def upload_image():
         logger.error(f"Upload failed: {e}")
         return jsonify({'error': str(e)}), 500
 
-# ---------- Admin CRUD (mock only – change to Supabase later) ----------
+# ---------- Admin CRUD (using Supabase) ----------
 @app.route('/admin/drinks', methods=['GET'])
 def admin_get_drinks():
     if not admin_required():
         return jsonify({'error': 'Unauthorized'}), 401
-    return jsonify(mock_drinks)
+    if not supabase:
+        return jsonify([]), 500
+    try:
+        response = supabase.table('drinks').select('*, categories(name)').execute()
+        drinks = response.data
+        for d in drinks:
+            d['category_name'] = d.pop('categories', {}).get('name', 'Uncategorized')
+        return jsonify(drinks)
+    except Exception as e:
+        logger.error(f"Admin get drinks error: {e}")
+        return jsonify([]), 500
 
 @app.route('/admin/drinks', methods=['POST'])
 def admin_add_drink():
     if not admin_required():
         return jsonify({'error': 'Unauthorized'}), 401
+    if not supabase:
+        return jsonify({'error': 'Supabase not configured'}), 500
+
     data = request.get_json()
     required = ['name', 'price', 'description', 'image_url', 'category_id']
     if not all(k in data for k in required):
         return jsonify({'error': 'Missing fields'}), 400
 
-    global next_drink_id, mock_drinks
-    cat_name = "Uncategorized"
-    for c in mock_categories:
-        if c['id'] == data['category_id']:
-            cat_name = c['name']
-            break
-
+    # If image_url is empty, set placeholder
     if not data['image_url'] or data['image_url'].strip() == '':
         data['image_url'] = f"https://via.placeholder.com/400x300/1a120e/d4af37?text={data['name'][:10]}"
 
-    new_drink = {
-        "id": next_drink_id,
-        "name": data['name'],
-        "price": data['price'],
-        "description": data['description'],
-        "image_url": data['image_url'],
-        "category_id": data['category_id'],
-        "category_name": cat_name
-    }
-    mock_drinks.append(new_drink)
-    next_drink_id += 1
-    return jsonify(new_drink), 201
+    try:
+        result = supabase.table('drinks').insert(data).execute()
+        return jsonify(result.data[0]), 201
+    except Exception as e:
+        logger.error(f"Add drink error: {e}")
+        return jsonify({'error': str(e)}), 500
 
 @app.route('/admin/drinks/<int:drink_id>', methods=['PUT'])
 def admin_edit_drink(drink_id):
     if not admin_required():
         return jsonify({'error': 'Unauthorized'}), 401
+    if not supabase:
+        return jsonify({'error': 'Supabase not configured'}), 500
+
     data = request.get_json()
-    for d in mock_drinks:
-        if d['id'] == drink_id:
-            d.update(data)
-            for c in mock_categories:
-                if c['id'] == data.get('category_id', d['category_id']):
-                    d['category_name'] = c['name']
-                    break
-            break
-    return jsonify({"id": drink_id, **data}), 200
+    # Remove any fields that shouldn't be updated (like id)
+    try:
+        result = supabase.table('drinks').update(data).eq('id', drink_id).execute()
+        if result.data:
+            return jsonify(result.data[0])
+        else:
+            return jsonify({'error': 'Drink not found'}), 404
+    except Exception as e:
+        logger.error(f"Edit drink error: {e}")
+        return jsonify({'error': str(e)}), 500
 
 @app.route('/admin/drinks/<int:drink_id>', methods=['DELETE'])
 def admin_delete_drink(drink_id):
     if not admin_required():
         return jsonify({'error': 'Unauthorized'}), 401
-    global mock_drinks
-    mock_drinks = [d for d in mock_drinks if d['id'] != drink_id]
-    return jsonify({'success': True})
+    if not supabase:
+        return jsonify({'error': 'Supabase not configured'}), 500
 
+    try:
+        # First delete the drink
+        supabase.table('drinks').delete().eq('id', drink_id).execute()
+        return jsonify({'success': True})
+    except Exception as e:
+        logger.error(f"Delete drink error: {e}")
+        return jsonify({'error': str(e)}), 500
+
+# ---------- Admin CRUD for categories ----------
 @app.route('/admin/categories', methods=['GET'])
 def admin_get_categories():
     if not admin_required():
         return jsonify({'error': 'Unauthorized'}), 401
-    return jsonify(mock_categories)
+    if not supabase:
+        return jsonify([]), 500
+    try:
+        response = supabase.table('categories').select('*').execute()
+        return jsonify(response.data)
+    except Exception as e:
+        logger.error(f"Get categories error: {e}")
+        return jsonify([]), 500
 
 @app.route('/admin/categories', methods=['POST'])
 def admin_add_category():
     if not admin_required():
         return jsonify({'error': 'Unauthorized'}), 401
+    if not supabase:
+        return jsonify({'error': 'Supabase not configured'}), 500
+
     data = request.get_json()
     if 'name' not in data:
         return jsonify({'error': 'Missing name'}), 400
-    global next_cat_id, mock_categories
-    new_cat = {"id": next_cat_id, "name": data['name']}
-    mock_categories.append(new_cat)
-    next_cat_id += 1
-    return jsonify(new_cat), 201
+
+    try:
+        result = supabase.table('categories').insert(data).execute()
+        return jsonify(result.data[0]), 201
+    except Exception as e:
+        logger.error(f"Add category error: {e}")
+        return jsonify({'error': str(e)}), 500
 
 @app.route('/admin/categories/<int:cat_id>', methods=['PUT'])
 def admin_edit_category(cat_id):
     if not admin_required():
         return jsonify({'error': 'Unauthorized'}), 401
+    if not supabase:
+        return jsonify({'error': 'Supabase not configured'}), 500
+
     data = request.get_json()
-    for c in mock_categories:
-        if c['id'] == cat_id:
-            c.update(data)
-            break
-    return jsonify({"id": cat_id, **data}), 200
+    try:
+        result = supabase.table('categories').update(data).eq('id', cat_id).execute()
+        if result.data:
+            return jsonify(result.data[0])
+        else:
+            return jsonify({'error': 'Category not found'}), 404
+    except Exception as e:
+        logger.error(f"Edit category error: {e}")
+        return jsonify({'error': str(e)}), 500
 
 @app.route('/admin/categories/<int:cat_id>', methods=['DELETE'])
 def admin_delete_category(cat_id):
     if not admin_required():
         return jsonify({'error': 'Unauthorized'}), 401
-    global mock_categories
-    mock_categories = [c for c in mock_categories if c['id'] != cat_id]
-    return jsonify({'success': True})
+    if not supabase:
+        return jsonify({'error': 'Supabase not configured'}), 500
+
+    try:
+        # Optional: set category_id to NULL for drinks before deleting
+        # supabase.table('drinks').update({'category_id': None}).eq('category_id', cat_id).execute()
+        supabase.table('categories').delete().eq('id', cat_id).execute()
+        return jsonify({'success': True})
+    except Exception as e:
+        logger.error(f"Delete category error: {e}")
+        return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)
