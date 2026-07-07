@@ -1,0 +1,582 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Tamasha Admin</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" />
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}" />
+    <style>
+        /* Modal styles */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.7);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+        .modal-content {
+            background: #14100d;
+            border: 1px solid #d4af37;
+            border-radius: 16px;
+            padding: 2rem;
+            max-width: 500px;
+            width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+            position: relative;
+        }
+        .modal-close {
+            position: absolute;
+            top: 10px; right: 15px;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: #b8a08e;
+        }
+        .modal-close:hover { color: #d4af37; }
+        .modal-content h3 { color: #d4af37; margin-bottom: 1rem; }
+        .modal-content .form-group { margin-bottom: 1rem; }
+        .modal-content .form-group label { display: block; margin-bottom: 0.3rem; color: #b8a08e; }
+        .modal-content .form-group input,
+        .modal-content .form-group textarea,
+        .modal-content .form-group select {
+            width: 100%;
+            padding: 0.7rem 1rem;
+            border-radius: 8px;
+            border: 1px solid #3a2a1f;
+            background: #1a120e;
+            color: #f0e6d3;
+            font-size: 1rem;
+        }
+        .modal-content .btn-primary {
+            background: #d4af37;
+            border: none;
+            color: #0a0a0a;
+            padding: 0.7rem 2rem;
+            border-radius: 50px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 0.5rem;
+        }
+        .modal-content .btn-secondary {
+            background: #3a2a1f;
+            border: none;
+            color: #f0e6d3;
+            padding: 0.7rem 2rem;
+            border-radius: 50px;
+            cursor: pointer;
+            margin-left: 0.5rem;
+        }
+        .modal-content .btn-secondary:hover { background: #5a3f2f; }
+        .upload-group { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+        .upload-group input[type="file"] { flex: 1; }
+    </style>
+</head>
+<body>
+    <header class="club-header admin-header">
+        <div class="header-content">
+            <div class="logo-icon"><i class="fas fa-crown"></i></div>
+            <h1 class="club-name"><span class="highlight">Tamasha</span> Admin</h1>
+        </div>
+        <div class="header-accent"></div>
+    </header>
+
+    <div class="admin-container" id="adminContainer">
+        <!-- Login form -->
+        <div id="loginSection" class="login-section">
+            <div class="login-card">
+                <h2><i class="fas fa-lock"></i> Admin Access</h2>
+                <p>Enter the club's admin password to manage the catalogue.</p>
+                <div class="login-form">
+                    <input type="password" id="adminPassword" placeholder="Password" />
+                    <button id="loginBtn"><i class="fas fa-sign-in-alt"></i> Login</button>
+                    <div id="loginError" class="error-message"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Dashboard -->
+        <div id="dashboardSection" style="display: none;">
+            <div class="admin-toolbar">
+                <h2><i class="fas fa-glass-martini-alt"></i> Drink Manager</h2>
+                <button id="logoutBtn" class="logout-btn"><i class="fas fa-sign-out-alt"></i> Logout</button>
+            </div>
+
+            <!-- Add Drink Form (inline) -->
+            <div class="admin-form card">
+                <h3 id="formTitle">Add New Drink</h3>
+                <form id="drinkForm">
+                    <input type="hidden" id="editDrinkId" />
+                    <div class="form-group">
+                        <label>Name</label>
+                        <input type="text" id="drinkName" required />
+                    </div>
+                    <div class="form-group">
+                        <label>Price (Kshs)</label>
+                        <input type="number" step="0.01" id="drinkPrice" required />
+                    </div>
+                    <div class="form-group">
+                        <label>Description</label>
+                        <textarea id="drinkDescription" rows="2"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label>Upload Image (file)</label>
+                        <div class="upload-group">
+                            <input type="file" id="drinkImageFile" accept="image/*" />
+                            <button type="button" id="uploadImageBtn" class="btn-secondary">Upload</button>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Image URL (or use upload above)</label>
+                        <input type="url" id="drinkImageUrl" placeholder="https://example.com/image.jpg" />
+                    </div>
+                    <div class="form-group">
+                        <label>Category</label>
+                        <select id="drinkCategory"></select>
+                    </div>
+                    <button type="submit" id="submitDrinkBtn" class="btn-primary"><i class="fas fa-save"></i> Save Drink</button>
+                    <button type="button" id="cancelEditBtn" class="btn-secondary" style="display: none;">Cancel</button>
+                </form>
+            </div>
+
+            <!-- Category Manager -->
+            <div class="category-manager card">
+                <h3>Manage Categories</h3>
+                <div class="category-list" id="categoryList"></div>
+                <div class="category-add">
+                    <input type="text" id="newCategoryName" placeholder="New category name" />
+                    <button id="addCategoryBtn"><i class="fas fa-plus"></i> Add</button>
+                </div>
+            </div>
+
+            <!-- Drinks Table -->
+            <div class="drinks-table-wrapper card">
+                <h3>Current Drinks</h3>
+                <div id="drinksTableContainer">
+                    <table id="drinksTable">
+                        <thead><tr><th>Image</th><th>Name</th><th>Price</th><th>Category</th><th>Actions</th></tr></thead>
+                        <tbody id="drinksTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ====== EDIT MODAL with file upload ====== -->
+    <div id="editModal" class="modal">
+        <div class="modal-content">
+            <span class="modal-close" id="modalClose">&times;</span>
+            <h3 id="modalTitle">Edit Drink</h3>
+            <form id="editForm">
+                <input type="hidden" id="editId" />
+                <div class="form-group">
+                    <label>Name</label>
+                    <input type="text" id="editName" required />
+                </div>
+                <div class="form-group">
+                    <label>Price (Kshs)</label>
+                    <input type="number" step="0.01" id="editPrice" required />
+                </div>
+                <div class="form-group">
+                    <label>Description</label>
+                    <textarea id="editDescription" rows="2"></textarea>
+                </div>
+                <div class="form-group">
+                    <label>Upload Image (file)</label>
+                    <div class="upload-group">
+                        <input type="file" id="editImageFile" accept="image/*" />
+                        <button type="button" id="editUploadImageBtn" class="btn-secondary">Upload</button>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Image URL (or use upload above)</label>
+                    <input type="url" id="editImageUrl" placeholder="https://example.com/image.jpg" />
+                </div>
+                <div class="form-group">
+                    <label>Category</label>
+                    <select id="editCategory"></select>
+                </div>
+                <button type="submit" class="btn-primary" id="editSubmitBtn"><i class="fas fa-save"></i> Update Drink</button>
+                <button type="button" class="btn-secondary" id="modalCancelBtn">Cancel</button>
+            </form>
+        </div>
+    </div>
+
+    <footer class="club-footer">
+        <div class="footer-content"><p>&copy; 2026 Tamasha Club. All rights reserved.</p></div>
+    </footer>
+
+    <div class="helpline">
+        <a href="tel:+254700123456" class="helpline-btn"><i class="fas fa-phone-alt"></i><span>+254 700 123 456</span></a>
+    </div>
+
+    <script>
+        // ------ All logic inline - no external admin.js needed ------
+        document.addEventListener('DOMContentLoaded', function() {
+            // DOM refs
+            const loginSection = document.getElementById('loginSection');
+            const dashboardSection = document.getElementById('dashboardSection');
+            const loginBtn = document.getElementById('loginBtn');
+            const adminPassword = document.getElementById('adminPassword');
+            const loginError = document.getElementById('loginError');
+            const logoutBtn = document.getElementById('logoutBtn');
+
+            const drinkForm = document.getElementById('drinkForm');
+            const editDrinkId = document.getElementById('editDrinkId');
+            const drinkName = document.getElementById('drinkName');
+            const drinkPrice = document.getElementById('drinkPrice');
+            const drinkDescription = document.getElementById('drinkDescription');
+            const drinkImageUrl = document.getElementById('drinkImageUrl');
+            const drinkCategory = document.getElementById('drinkCategory');
+            const submitDrinkBtn = document.getElementById('submitDrinkBtn');
+            const cancelEditBtn = document.getElementById('cancelEditBtn');
+            const formTitle = document.getElementById('formTitle');
+
+            const drinksTableBody = document.getElementById('drinksTableBody');
+            const categoryList = document.getElementById('categoryList');
+            const newCategoryName = document.getElementById('newCategoryName');
+            const addCategoryBtn = document.getElementById('addCategoryBtn');
+
+            // Modal elements
+            const modal = document.getElementById('editModal');
+            const modalClose = document.getElementById('modalClose');
+            const modalCancelBtn = document.getElementById('modalCancelBtn');
+            const editId = document.getElementById('editId');
+            const editName = document.getElementById('editName');
+            const editPrice = document.getElementById('editPrice');
+            const editDescription = document.getElementById('editDescription');
+            const editImageUrl = document.getElementById('editImageUrl');
+            const editCategory = document.getElementById('editCategory');
+            const editSubmitBtn = document.getElementById('editSubmitBtn');
+            const modalTitle = document.getElementById('modalTitle');
+            const editImageFile = document.getElementById('editImageFile');
+
+            // ---------- Login ----------
+            loginBtn.addEventListener('click', async function() {
+                const password = adminPassword.value.trim();
+                if (!password) {
+                    loginError.textContent = 'Please enter the password.';
+                    return;
+                }
+                try {
+                    const res = await fetch('/admin/login', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ password })
+                    });
+                    const data = await res.json();
+                    if (data.success) {
+                        loginSection.style.display = 'none';
+                        dashboardSection.style.display = 'block';
+                        loginError.textContent = '';
+                        loadDrinks();
+                        loadCategoriesForSelect();
+                        loadCategoryList();
+                    } else {
+                        loginError.textContent = 'Incorrect password. Try again.';
+                    }
+                } catch (err) {
+                    loginError.textContent = 'Network error.';
+                }
+            });
+
+            logoutBtn.addEventListener('click', async function() {
+                await fetch('/admin/logout', { method: 'POST' });
+                loginSection.style.display = 'block';
+                dashboardSection.style.display = 'none';
+            });
+
+            // ---------- Load Drinks ----------
+            async function loadDrinks() {
+                try {
+                    const res = await fetch('/admin/drinks');
+                    const drinks = await res.json();
+                    renderDrinksTable(drinks);
+                } catch (err) { console.error(err); }
+            }
+
+            function renderDrinksTable(drinks) {
+                if (!drinks || drinks.length === 0) {
+                    drinksTableBody.innerHTML = `<tr><td colspan="5" style="text-align:center;color:#8a7a6a;">No drinks added yet.</td></tr>`;
+                    return;
+                }
+                drinksTableBody.innerHTML = drinks.map(d => `
+                    <tr>
+                        <td><img src="${d.image_url || 'https://via.placeholder.com/50/1a120e/d4af37?text=No+Img'}" alt="${d.name}" style="width:50px;height:50px;object-fit:cover;border-radius:8px;" /></td>
+                        <td>${d.name}</td>
+                        <td>Ksh ${Number(d.price).toFixed(2)}</td>
+                        <td>${d.category_name || 'Uncategorized'}</td>
+                        <td class="actions">
+                            <button class="edit-btn" data-id="${d.id}"><i class="fas fa-edit"></i></button>
+                            <button class="delete-btn" data-id="${d.id}"><i class="fas fa-trash-alt"></i></button>
+                        </td>
+                    </tr>
+                `).join('');
+                document.querySelectorAll('.edit-btn').forEach(btn => {
+                    btn.addEventListener('click', () => openEditModal(btn.dataset.id));
+                });
+                document.querySelectorAll('.delete-btn').forEach(btn => {
+                    btn.addEventListener('click', () => deleteDrink(btn.dataset.id));
+                });
+            }
+
+            // ---------- Load Categories for Select ----------
+            async function loadCategoriesForSelect() {
+                try {
+                    const res = await fetch('/admin/categories');
+                    const cats = await res.json();
+                    const select = document.getElementById('drinkCategory');
+                    select.innerHTML = cats.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+                    // also for modal
+                    const editSelect = document.getElementById('editCategory');
+                    editSelect.innerHTML = cats.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+                } catch (err) { console.error(err); }
+            }
+
+            async function loadCategoryList() {
+                try {
+                    const res = await fetch('/admin/categories');
+                    const cats = await res.json();
+                    const list = document.getElementById('categoryList');
+                    list.innerHTML = cats.map(c => `
+                        <div class="category-item">
+                            <span>${c.name}</span>
+                            <button class="delete-cat" data-id="${c.id}"><i class="fas fa-times"></i></button>
+                        </div>
+                    `).join('');
+                    document.querySelectorAll('.delete-cat').forEach(btn => {
+                        btn.addEventListener('click', () => deleteCategory(btn.dataset.id));
+                    });
+                    loadCategoriesForSelect();
+                } catch (err) { console.error(err); }
+            }
+
+            // ---------- Add/Edit Drink (inline form) ----------
+            drinkForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const data = {
+                    name: drinkName.value.trim(),
+                    price: parseFloat(drinkPrice.value),
+                    description: drinkDescription.value.trim(),
+                    image_url: drinkImageUrl.value.trim(),
+                    category_id: parseInt(drinkCategory.value)
+                };
+                const id = editDrinkId.value;
+                let url = '/admin/drinks';
+                let method = 'POST';
+                if (id) {
+                    url = `/admin/drinks/${id}`;
+                    method = 'PUT';
+                }
+                try {
+                    const res = await fetch(url, {
+                        method,
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(data)
+                    });
+                    if (res.ok) {
+                        resetForm();
+                        loadDrinks();
+                        loadCategoryList(); // update categories if needed
+                    } else {
+                        alert('Failed to save drink.');
+                    }
+                } catch (err) {
+                    alert('Error saving drink.');
+                }
+            });
+
+            cancelEditBtn.addEventListener('click', resetForm);
+
+            function resetForm() {
+                editDrinkId.value = '';
+                drinkName.value = '';
+                drinkPrice.value = '';
+                drinkDescription.value = '';
+                drinkImageUrl.value = '';
+                drinkCategory.value = '';
+                document.getElementById('drinkImageFile').value = '';
+                formTitle.textContent = 'Add New Drink';
+                submitDrinkBtn.textContent = 'Save Drink';
+                cancelEditBtn.style.display = 'none';
+            }
+
+            // ---------- Delete Drink ----------
+            async function deleteDrink(id) {
+                if (!confirm('Delete this drink?')) return;
+                try {
+                    const res = await fetch(`/admin/drinks/${id}`, { method: 'DELETE' });
+                    if (res.ok) {
+                        loadDrinks();
+                        loadCategoryList(); // update categories (if empty categories removed)
+                    } else {
+                        alert('Delete failed.');
+                    }
+                } catch (err) { alert('Error deleting.'); }
+            }
+
+            // ---------- Modal Edit ----------
+            function openEditModal(id) {
+                fetch('/admin/drinks')
+                    .then(res => res.json())
+                    .then(drinks => {
+                        const d = drinks.find(drink => drink.id == id);
+                        if (d) {
+                            editId.value = d.id;
+                            editName.value = d.name;
+                            editPrice.value = d.price;
+                            editDescription.value = d.description || '';
+                            editImageUrl.value = d.image_url || '';
+                            editCategory.value = d.category_id;
+                            modalTitle.textContent = `Edit "${d.name}"`;
+                            modal.style.display = 'flex';
+                            // Clear file input
+                            editImageFile.value = '';
+                        }
+                    });
+            }
+
+            function closeModal() {
+                modal.style.display = 'none';
+            }
+
+            modalClose.addEventListener('click', closeModal);
+            modalCancelBtn.addEventListener('click', closeModal);
+            window.addEventListener('click', (e) => {
+                if (e.target === modal) closeModal();
+            });
+
+            // Submit modal edit
+            document.getElementById('editForm').addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const id = editId.value;
+                const data = {
+                    name: editName.value.trim(),
+                    price: parseFloat(editPrice.value),
+                    description: editDescription.value.trim(),
+                    image_url: editImageUrl.value.trim(),
+                    category_id: parseInt(editCategory.value)
+                };
+                try {
+                    const res = await fetch(`/admin/drinks/${id}`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(data)
+                    });
+                    if (res.ok) {
+                        closeModal();
+                        loadDrinks();
+                        loadCategoryList();
+                    } else {
+                        alert('Failed to update drink.');
+                    }
+                } catch (err) {
+                    alert('Error updating drink.');
+                }
+            });
+
+            // ---------- Category Management ----------
+            addCategoryBtn.addEventListener('click', async function() {
+                const name = newCategoryName.value.trim();
+                if (!name) return;
+                try {
+                    const res = await fetch('/admin/categories', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ name })
+                    });
+                    if (res.ok) {
+                        newCategoryName.value = '';
+                        loadCategoryList();
+                        // refresh drink categories in selects
+                        loadCategoriesForSelect();
+                    } else {
+                        alert('Failed to add category.');
+                    }
+                } catch (err) { alert('Error adding category.'); }
+            });
+
+            async function deleteCategory(id) {
+                if (!confirm('Delete this category?')) return;
+                try {
+                    const res = await fetch(`/admin/categories/${id}`, { method: 'DELETE' });
+                    if (res.ok) {
+                        loadCategoryList();
+                        loadDrinks(); // refresh drinks table (category names may change)
+                        loadCategoriesForSelect();
+                    } else {
+                        alert('Failed to delete category.');
+                    }
+                } catch (err) { alert('Error deleting category.'); }
+            }
+
+            // ---------- File Upload (main form) ----------
+            document.getElementById('uploadImageBtn').addEventListener('click', async function() {
+                const fileInput = document.getElementById('drinkImageFile');
+                if (fileInput.files.length === 0) {
+                    alert('Please select an image file first.');
+                    return;
+                }
+                const formData = new FormData();
+                formData.append('file', fileInput.files[0]);
+                try {
+                    const res = await fetch('/admin/upload-image', {
+                        method: 'POST',
+                        body: formData
+                    });
+                    const data = await res.json();
+                    if (data.url) {
+                        document.getElementById('drinkImageUrl').value = data.url;
+                        alert('Image uploaded successfully!');
+                    } else {
+                        alert('Upload failed: ' + (data.error || 'Unknown error'));
+                    }
+                } catch (err) {
+                    alert('Error uploading image: ' + err.message);
+                }
+            });
+
+            // ---------- File Upload (modal) ----------
+            document.getElementById('editUploadImageBtn').addEventListener('click', async function() {
+                const fileInput = document.getElementById('editImageFile');
+                if (fileInput.files.length === 0) {
+                    alert('Please select an image file first.');
+                    return;
+                }
+                const formData = new FormData();
+                formData.append('file', fileInput.files[0]);
+                try {
+                    const res = await fetch('/admin/upload-image', {
+                        method: 'POST',
+                        body: formData
+                    });
+                    const data = await res.json();
+                    if (data.url) {
+                        document.getElementById('editImageUrl').value = data.url;
+                        alert('Image uploaded successfully!');
+                    } else {
+                        alert('Upload failed: ' + (data.error || 'Unknown error'));
+                    }
+                } catch (err) {
+                    alert('Error uploading image: ' + err.message);
+                }
+            });
+
+            // ---------- Check login status from template ----------
+            const loggedIn = {{ logged_in|tojson }};
+            if (loggedIn) {
+                loginSection.style.display = 'none';
+                dashboardSection.style.display = 'block';
+                loadDrinks();
+                loadCategoriesForSelect();
+                loadCategoryList();
+            }
+        });
+    </script>
+</body>
+</html>

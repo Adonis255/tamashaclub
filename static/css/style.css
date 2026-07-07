@@ -1,0 +1,667 @@
+/* ---------- Global Reset & Fonts ---------- */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Inter', sans-serif;
+    background: #0a0a0a;
+    color: #f0e6d3;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+/* ---------- Header ---------- */
+.club-header {
+    background: linear-gradient(135deg, #1a0f0a 0%, #2c1810 100%);
+    padding: 1.5rem 2rem;
+    border-bottom: 2px solid #d4af37;
+    text-align: center;
+    position: relative;
+}
+
+.header-content {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+.logo-icon {
+    font-size: 2.5rem;
+    color: #d4af37;
+}
+
+.club-name {
+    font-family: 'Playfair Display', serif;
+    font-size: 2.8rem;
+    font-weight: 700;
+    letter-spacing: 2px;
+    color: #f0e6d3;
+}
+
+.club-name .highlight {
+    color: #d4af37;
+    text-shadow: 0 0 20px rgba(212, 175, 55, 0.3);
+}
+
+.club-tagline {
+    font-size: 1rem;
+    font-weight: 300;
+    letter-spacing: 4px;
+    color: #b8a08e;
+    margin-left: 0.5rem;
+}
+
+.header-accent {
+    height: 3px;
+    width: 80px;
+    background: linear-gradient(90deg, transparent, #d4af37, transparent);
+    margin: 0.5rem auto 0;
+}
+
+/* ---------- Welcome ---------- */
+.welcome-section {
+    padding: 2rem 1.5rem 1rem;
+    text-align: center;
+}
+
+.welcome-card {
+    max-width: 800px;
+    margin: 0 auto;
+    background: rgba(212, 175, 55, 0.05);
+    border: 1px solid rgba(212, 175, 55, 0.2);
+    border-radius: 16px;
+    padding: 1.8rem;
+    backdrop-filter: blur(4px);
+}
+
+.welcome-card h2 {
+    font-family: 'Playfair Display', serif;
+    font-size: 2rem;
+    color: #d4af37;
+    margin-bottom: 0.5rem;
+}
+
+.welcome-card p {
+    font-weight: 300;
+    line-height: 1.7;
+    color: #cfc0b0;
+}
+
+.welcome-motto {
+    display: inline-block;
+    margin-top: 0.5rem;
+    font-style: italic;
+    color: #d4af37;
+    letter-spacing: 2px;
+}
+
+/* ---------- Controls ---------- */
+.controls-section {
+    padding: 1rem 1.5rem 0.5rem;
+}
+
+.controls-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    align-items: center;
+    justify-content: center;
+}
+
+.search-wrapper {
+    flex: 2 1 300px;
+    position: relative;
+}
+
+.search-wrapper input {
+    width: 100%;
+    padding: 0.8rem 2.5rem 0.8rem 3rem;
+    border-radius: 50px;
+    border: 1px solid #3a2a1f;
+    background: #1a120e;
+    color: #f0e6d3;
+    font-size: 1rem;
+    transition: border 0.3s, box-shadow 0.3s;
+}
+
+.search-wrapper input:focus {
+    border-color: #d4af37;
+    box-shadow: 0 0 15px rgba(212, 175, 55, 0.2);
+    outline: none;
+}
+
+.search-icon {
+    position: absolute;
+    left: 1.2rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #b8a08e;
+}
+
+.clear-btn {
+    position: absolute;
+    right: 1rem;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    color: #b8a08e;
+    cursor: pointer;
+    font-size: 1.1rem;
+    display: none;
+}
+
+.clear-btn.visible {
+    display: block;
+}
+
+.filter-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+    flex-wrap: wrap;
+}
+
+.filter-label {
+    color: #b8a08e;
+    font-weight: 500;
+}
+
+.category-pills {
+    display: flex;
+    gap: 0.6rem;
+    flex-wrap: wrap;
+}
+
+.category-pill {
+    padding: 0.4rem 1.2rem;
+    border-radius: 50px;
+    background: #1a120e;
+    border: 1px solid #3a2a1f;
+    color: #cfc0b0;
+    cursor: pointer;
+    transition: all 0.25s;
+    font-size: 0.85rem;
+    font-weight: 500;
+}
+
+.category-pill:hover {
+    background: #2c1f16;
+    border-color: #d4af37;
+}
+
+.category-pill.active {
+    background: #d4af37;
+    color: #0a0a0a;
+    border-color: #d4af37;
+}
+
+/* ---------- Drinks Grid ---------- */
+.catalogue {
+    flex: 1;
+    padding: 1.5rem;
+    max-width: 1400px;
+    margin: 0 auto;
+    width: 100%;
+}
+
+.drinks-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 2rem;
+}
+
+.drink-card {
+    background: #14100d;
+    border-radius: 16px;
+    overflow: hidden;
+    transition: transform 0.3s, box-shadow 0.3s, border-color 0.3s;
+    border: 1px solid #2a1f18;
+    display: flex;
+    flex-direction: column;
+}
+
+.drink-card:hover {
+    transform: translateY(-6px);
+    box-shadow: 0 12px 40px rgba(212, 175, 55, 0.15);
+    border-color: #d4af37;
+}
+
+.drink-card .image-wrapper {
+    height: 200px;
+    background: #0f0b08;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+}
+
+.drink-card .image-wrapper img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.drink-card .drink-info {
+    padding: 1.2rem 1.2rem 1.5rem;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.drink-card .drink-name {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.3rem;
+    font-weight: 600;
+    color: #f0e6d3;
+    margin-bottom: 0.3rem;
+}
+
+.drink-card .drink-price {
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: #d4af37;
+    margin-bottom: 0.4rem;
+}
+
+.drink-card .drink-description {
+    font-size: 0.9rem;
+    color: #b8a08e;
+    line-height: 1.5;
+    flex: 1;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.drink-card .drink-category-tag {
+    margin-top: 0.6rem;
+    font-size: 0.75rem;
+    color: #8a7a6a;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    border-top: 1px solid #2a1f18;
+    padding-top: 0.6rem;
+}
+
+/* ---------- Loading & Empty ---------- */
+.loading-spinner {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+    padding: 3rem;
+    color: #b8a08e;
+    font-size: 1.2rem;
+}
+
+.loading-spinner i {
+    font-size: 2rem;
+    color: #d4af37;
+}
+
+.empty-state {
+    text-align: center;
+    padding: 4rem 1rem;
+    color: #8a7a6a;
+}
+
+.empty-state i {
+    font-size: 3rem;
+    color: #3a2a1f;
+    margin-bottom: 1rem;
+}
+
+.empty-state h3 {
+    font-size: 1.5rem;
+    color: #b8a08e;
+}
+
+/* ---------- Footer ---------- */
+.club-footer {
+    margin-top: auto;
+    background: #0f0b08;
+    padding: 1.5rem;
+    text-align: center;
+    border-top: 1px solid #2a1f18;
+    color: #8a7a6a;
+    font-size: 0.9rem;
+}
+
+.footer-tagline {
+    font-size: 0.8rem;
+    margin-top: 0.3rem;
+    letter-spacing: 1px;
+}
+
+/* ---------- Helpline ---------- */
+.helpline {
+    position: fixed;
+    bottom: 2rem;
+    right: 2rem;
+    z-index: 999;
+}
+
+.helpline-btn {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    background: #d4af37;
+    color: #0a0a0a;
+    padding: 0.7rem 1.5rem;
+    border-radius: 50px;
+    text-decoration: none;
+    font-weight: 600;
+    box-shadow: 0 8px 25px rgba(212, 175, 55, 0.4);
+    transition: background 0.3s, transform 0.2s;
+}
+
+.helpline-btn:hover {
+    background: #e6c24a;
+    transform: scale(1.03);
+}
+
+.helpline-btn i {
+    font-size: 1.2rem;
+}
+
+/* ---------- Admin Styles ---------- */
+.admin-header {
+    padding: 1rem 2rem;
+}
+
+.admin-container {
+    max-width: 1200px;
+    margin: 2rem auto;
+    padding: 0 1.5rem;
+    flex: 1;
+}
+
+.login-section {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 50vh;
+}
+
+.login-card {
+    background: #14100d;
+    padding: 2.5rem;
+    border-radius: 20px;
+    border: 1px solid #2a1f18;
+    max-width: 400px;
+    width: 100%;
+    text-align: center;
+}
+
+.login-card h2 {
+    font-family: 'Playfair Display', serif;
+    color: #d4af37;
+    margin-bottom: 0.5rem;
+}
+
+.login-card p {
+    color: #b8a08e;
+    margin-bottom: 1.5rem;
+}
+
+.login-form input {
+    width: 100%;
+    padding: 0.8rem 1rem;
+    border-radius: 50px;
+    border: 1px solid #3a2a1f;
+    background: #1a120e;
+    color: #f0e6d3;
+    margin-bottom: 1rem;
+}
+
+.login-form input:focus {
+    border-color: #d4af37;
+    outline: none;
+}
+
+.login-form button {
+    width: 100%;
+    padding: 0.8rem;
+    border: none;
+    border-radius: 50px;
+    background: #d4af37;
+    color: #0a0a0a;
+    font-weight: 600;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: background 0.3s;
+}
+
+.login-form button:hover {
+    background: #e6c24a;
+}
+
+.error-message {
+    color: #e74c3c;
+    margin-top: 0.8rem;
+    font-size: 0.9rem;
+}
+
+.admin-toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+
+.admin-toolbar h2 {
+    font-family: 'Playfair Display', serif;
+    color: #d4af37;
+}
+
+.logout-btn {
+    background: #3a2a1f;
+    border: none;
+    color: #f0e6d3;
+    padding: 0.6rem 1.5rem;
+    border-radius: 50px;
+    cursor: pointer;
+    transition: background 0.3s;
+}
+
+.logout-btn:hover {
+    background: #5a3f2f;
+}
+
+.card {
+    background: #14100d;
+    border-radius: 16px;
+    border: 1px solid #2a1f18;
+    padding: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.card h3 {
+    color: #d4af37;
+    margin-bottom: 1rem;
+    font-family: 'Playfair Display', serif;
+}
+
+.form-group {
+    margin-bottom: 1rem;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 0.3rem;
+    color: #b8a08e;
+    font-size: 0.9rem;
+}
+
+.form-group input,
+.form-group textarea,
+.form-group select {
+    width: 100%;
+    padding: 0.7rem 1rem;
+    border-radius: 8px;
+    border: 1px solid #3a2a1f;
+    background: #1a120e;
+    color: #f0e6d3;
+    font-size: 1rem;
+}
+
+.form-group textarea {
+    resize: vertical;
+    min-height: 60px;
+}
+
+.btn-primary {
+    background: #d4af37;
+    border: none;
+    color: #0a0a0a;
+    padding: 0.7rem 2rem;
+    border-radius: 50px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.3s;
+    margin-right: 0.5rem;
+}
+
+.btn-primary:hover {
+    background: #e6c24a;
+}
+
+.btn-secondary {
+    background: #3a2a1f;
+    border: none;
+    color: #f0e6d3;
+    padding: 0.7rem 2rem;
+    border-radius: 50px;
+    cursor: pointer;
+}
+
+.btn-secondary:hover {
+    background: #5a3f2f;
+}
+
+.category-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+}
+
+.category-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: #1a120e;
+    padding: 0.3rem 0.8rem 0.3rem 1.2rem;
+    border-radius: 50px;
+    border: 1px solid #3a2a1f;
+}
+
+.category-item button {
+    background: none;
+    border: none;
+    color: #b8a08e;
+    cursor: pointer;
+    transition: color 0.3s;
+}
+
+.category-item button:hover {
+    color: #e74c3c;
+}
+
+.category-add {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.category-add input {
+    flex: 1;
+    padding: 0.6rem 1rem;
+    border-radius: 50px;
+    border: 1px solid #3a2a1f;
+    background: #1a120e;
+    color: #f0e6d3;
+}
+
+.category-add button {
+    padding: 0.6rem 1.5rem;
+    border: none;
+    border-radius: 50px;
+    background: #d4af37;
+    color: #0a0a0a;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.drinks-table-wrapper table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.9rem;
+}
+
+.drinks-table-wrapper th,
+.drinks-table-wrapper td {
+    padding: 0.8rem 0.5rem;
+    border-bottom: 1px solid #2a1f18;
+    text-align: left;
+}
+
+.drinks-table-wrapper th {
+    color: #d4af37;
+    font-weight: 600;
+}
+
+.drinks-table-wrapper td img {
+    width: 50px;
+    height: 50px;
+    object-fit: cover;
+    border-radius: 8px;
+}
+
+.drinks-table-wrapper .actions {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.drinks-table-wrapper .actions button {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: #b8a08e;
+    transition: color 0.3s;
+    font-size: 1rem;
+}
+
+.drinks-table-wrapper .actions button.edit-btn:hover {
+    color: #d4af37;
+}
+
+.drinks-table-wrapper .actions button.delete-btn:hover {
+    color: #e74c3c;
+}
+
+/* ---------- Responsive ---------- */
+@media (max-width: 768px) {
+    .club-name { font-size: 2rem; }
+    .club-tagline { font-size: 0.8rem; }
+    .welcome-card h2 { font-size: 1.5rem; }
+    .drinks-grid { grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); }
+    .admin-toolbar { flex-direction: column; align-items: stretch; }
+    .category-add { flex-wrap: wrap; }
+}
+
+@media (max-width: 480px) {
+    .header-content { flex-direction: column; }
+    .drinks-grid { grid-template-columns: 1fr; }
+}

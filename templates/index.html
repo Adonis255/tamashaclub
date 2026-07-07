@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Tamasha Club · Premium Drinks</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" />
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}" />
+</head>
+<body>
+    <header class="club-header">
+        <div class="header-content">
+            <div class="logo-icon"><i class="fas fa-crown"></i></div>
+            <h1 class="club-name"><span class="highlight">Tamasha</span> Club</h1>
+            <p class="club-tagline">— where every pour tells a story —</p>
+        </div>
+        <div class="header-accent"></div>
+    </header>
+
+    <section class="welcome-section">
+        <div class="welcome-card">
+            <h2>Welcome to Tamasha Club</h2>
+            <p>Indulge in our curated selection of the finest spirits from around the world. From timeless classics to rare finds, every bottle in our catalogue is handpicked for the discerning palate. <br /><span class="welcome-motto">Sip · Savour · Celebrate</span></p>
+        </div>
+    </section>
+
+    <section class="controls-section">
+        <div class="controls-container">
+            <div class="search-wrapper">
+                <i class="fas fa-search search-icon"></i>
+                <input type="text" id="searchInput" placeholder="Search for your favourite drink…" autocomplete="off" />
+                <button id="clearSearch" class="clear-btn"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="filter-wrapper">
+                <span class="filter-label"><i class="fas fa-filter"></i> Category</span>
+                <div class="category-pills" id="categoryFilters"></div>
+            </div>
+        </div>
+    </section>
+
+    <main class="catalogue">
+        <div class="drinks-grid" id="drinksGrid"></div>
+        <div class="loading-spinner" id="loadingSpinner"><i class="fas fa-spinner fa-spin"></i><span>Loading premium pours…</span></div>
+        <div class="empty-state" id="emptyState" style="display: none;"><i class="fas fa-glass-whiskey"></i><h3>No drinks found</h3><p>Try adjusting your search or filter.</p></div>
+    </main>
+
+    <footer class="club-footer">
+        <div class="footer-content"><p>&copy; 2026 Tamasha Club. All rights reserved.</p><p class="footer-tagline">Drink responsibly · 18+ only</p></div>
+    </footer>
+
+    <div class="helpline">
+        <a href="tel:+254700123456" class="helpline-btn"><i class="fas fa-phone-alt"></i><span>+254 700 123 456</span></a>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+</body>
+</html>
