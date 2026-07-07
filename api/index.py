@@ -2,7 +2,6 @@ import sys
 import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from app import app  # your Flask app instance
+from app import app
 
-# Vercel needs this
 app = app
