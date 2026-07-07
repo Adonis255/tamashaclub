@@ -288,10 +288,10 @@
                 dashboardSection.style.display = 'none';
             });
 
-            // ---------- Load Drinks ----------
+            // ---------- Load Drinks (with cache‑busting) ----------
             async function loadDrinks() {
                 try {
-                    const res = await fetch('/admin/drinks');
+                    const res = await fetch('/admin/drinks?_=' + Date.now());
                     const drinks = await res.json();
                     renderDrinksTable(drinks);
                 } catch (err) { console.error(err); }
@@ -315,11 +315,9 @@
                     </tr>
                 `).join('');
                 // No need to attach listeners individually – we'll use event delegation on the table body.
-                // But we keep the buttons with data-id attributes.
             }
 
             // ----- EVENT DELEGATION for buttons inside the table body -----
-            // This ensures that dynamically added buttons work without re-attaching listeners.
             drinksTableBody.addEventListener('click', function(e) {
                 const target = e.target.closest('button');
                 if (!target) return;
@@ -335,7 +333,7 @@
             // ---------- Load Categories for Select ----------
             async function loadCategoriesForSelect() {
                 try {
-                    const res = await fetch('/admin/categories');
+                    const res = await fetch('/admin/categories?_=' + Date.now());
                     const cats = await res.json();
                     const select = document.getElementById('drinkCategory');
                     select.innerHTML = cats.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
@@ -346,7 +344,7 @@
 
             async function loadCategoryList() {
                 try {
-                    const res = await fetch('/admin/categories');
+                    const res = await fetch('/admin/categories?_=' + Date.now());
                     const cats = await res.json();
                     const list = document.getElementById('categoryList');
                     list.innerHTML = cats.map(c => `
@@ -389,11 +387,13 @@
                         resetForm();
                         loadDrinks();
                         loadCategoryList();
+                        alert('Saved successfully.');
                     } else {
-                        alert('Failed to save drink.');
+                        const err = await res.json();
+                        alert('Save failed: ' + (err.error || 'Unknown error'));
                     }
                 } catch (err) {
-                    alert('Error saving drink.');
+                    alert('Error saving: ' + err.message);
                 }
             });
 
@@ -412,28 +412,31 @@
                 cancelEditBtn.style.display = 'none';
             }
 
-            // ---------- Delete Drink ----------
+            // ---------- Delete Drink (improved) ----------
             async function deleteDrink(id) {
                 if (!confirm('Delete this drink permanently?')) return;
                 try {
-                    const res = await fetch(`/admin/drinks/${id}`, { method: 'DELETE' });
+                    const res = await fetch(`/admin/drinks/${id}`, {
+                        method: 'DELETE',
+                        headers: { 'Content-Type': 'application/json' }
+                    });
                     if (res.ok) {
-                        // Refresh the list
+                        alert('✅ Drink deleted successfully.');
+                        // Reload both admin table and categories (in case category became empty)
                         loadDrinks();
                         loadCategoryList();
-                        alert('Drink deleted successfully.');
                     } else {
                         const err = await res.json();
-                        alert('Delete failed: ' + (err.error || 'Unknown error'));
+                        alert('❌ Delete failed: ' + (err.error || 'Unknown error'));
                     }
                 } catch (err) {
-                    alert('Error deleting: ' + err.message);
+                    alert('❌ Network error: ' + err.message);
                 }
             }
 
             // ---------- Modal Edit ----------
             function openEditModal(id) {
-                fetch('/admin/drinks')
+                fetch('/admin/drinks?_=' + Date.now())
                     .then(res => res.json())
                     .then(drinks => {
                         const d = drinks.find(drink => drink.id == id);
@@ -482,11 +485,13 @@
                         closeModal();
                         loadDrinks();
                         loadCategoryList();
+                        alert('Updated successfully.');
                     } else {
-                        alert('Failed to update drink.');
+                        const err = await res.json();
+                        alert('Update failed: ' + (err.error || 'Unknown error'));
                     }
                 } catch (err) {
-                    alert('Error updating drink.');
+                    alert('Error updating: ' + err.message);
                 }
             });
 
@@ -504,6 +509,7 @@
                         newCategoryName.value = '';
                         loadCategoryList();
                         loadCategoriesForSelect();
+                        alert('Category added.');
                     } else {
                         alert('Failed to add category.');
                     }
@@ -518,6 +524,7 @@
                         loadCategoryList();
                         loadDrinks();
                         loadCategoriesForSelect();
+                        alert('Category deleted.');
                     } else {
                         alert('Failed to delete category.');
                     }
@@ -541,12 +548,12 @@
                     const data = await res.json();
                     if (data.url) {
                         document.getElementById('drinkImageUrl').value = data.url;
-                        alert('Image uploaded successfully!');
+                        alert('✅ Image uploaded successfully!');
                     } else {
-                        alert('Upload failed: ' + (data.error || 'Unknown error'));
+                        alert('❌ Upload failed: ' + (data.error || 'Unknown error'));
                     }
                 } catch (err) {
-                    alert('Error uploading image: ' + err.message);
+                    alert('❌ Error uploading image: ' + err.message);
                 }
             });
 
@@ -567,12 +574,12 @@
                     const data = await res.json();
                     if (data.url) {
                         document.getElementById('editImageUrl').value = data.url;
-                        alert('Image uploaded successfully!');
+                        alert('✅ Image uploaded successfully!');
                     } else {
-                        alert('Upload failed: ' + (data.error || 'Unknown error'));
+                        alert('❌ Upload failed: ' + (data.error || 'Unknown error'));
                     }
                 } catch (err) {
-                    alert('Error uploading image: ' + err.message);
+                    alert('❌ Error uploading image: ' + err.message);
                 }
             });
 
