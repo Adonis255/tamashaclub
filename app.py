@@ -1,39 +1,42 @@
 import os
 import uuid
+import logging
 from datetime import datetime
 from flask import Flask, request, jsonify, render_template, session, url_for
 from flask_cors import CORS
-from supabase import create_client, Client
 from dotenv import load_dotenv
 
+# ---------- Logging ----------
+logging.basicConfig(level=logging.DEBUG)
+logger = logging.getLogger(__name__)
+
+# ---------- Load .env (local only) ----------
 load_dotenv(dotenv_path='.env')
 
-print("SUPABASE_URL =", os.getenv('SUPABASE_URL'))
-print("SUPABASE_KEY =", os.getenv('SUPABASE_KEY')[:10] + "..." if os.getenv('SUPABASE_KEY') else "None")
-
+# ---------- Flask app ----------
 app = Flask(__name__, static_folder='static', template_folder='templates')
 app.secret_key = os.getenv('SECRET_KEY', 'dev-secret-key-change-in-production')
 CORS(app)
 
-SUPABASE_URL = os.getenv('SUPABASE_URL')
-SUPABASE_KEY = os.getenv('SUPABASE_KEY')
-
-# Initialize Supabase client
+# ---------- Supabase (safe init) ----------
 supabase = None
-if SUPABASE_URL and SUPABASE_KEY:
-    try:
+try:
+    from supabase import create_client, Client
+    SUPABASE_URL = os.getenv('SUPABASE_URL')
+    SUPABASE_KEY = os.getenv('SUPABASE_KEY')
+    if SUPABASE_URL and SUPABASE_KEY:
         supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
-    except:
-        supabase = None
+        logger.info("Supabase client initialized.")
+    else:
+        logger.warning("Supabase credentials missing – using mock data.")
+except Exception as e:
+    logger.error(f"Supabase init failed: {e}")
 
+# ---------- Config ----------
 ADMIN_PASSWORD = os.getenv('ADMIN_PASSWORD', 'tamasha2025')
-INACTIVITY_TIMEOUT = 300
+INACTIVITY_TIMEOUT = 300  # 5 minutes
 
-# ---------- Local upload folder (fallback) ----------
-UPLOAD_FOLDER = os.path.join('static', 'uploads')
-os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-
-# ---------- In-memory mock data ----------
+# ---------- Mock data ----------
 mock_drinks = [
     {"id": 1, "name": "Gordon's London Dry Gin", "price": 2800, "description": "Crisp, classic London dry gin with juniper and citrus notes.", "image_url": "https://cdn.shopify.com/s/files/1/0279/5286/6392/products/gordons-gin.jpg", "category_name": "Gin", "category_id": 1},
     {"id": 2, "name": "Johnnie Walker Black Label", "price": 4500, "description": "Smooth, smoky blended Scotch whisky with rich character.", "image_url": "https://cdn.shopify.com/s/files/1/0279/5286/6392/products/johnnie-walker-black-label.jpg", "category_name": "Whisky", "category_id": 2},
@@ -51,6 +54,7 @@ mock_categories = [
 next_drink_id = 5
 next_cat_id = 7
 
+# ---------- Helpers ----------
 def admin_required():
     if 'admin' not in session:
         return False
@@ -85,8 +89,9 @@ def get_drinks():
                 d['category_name'] = d.pop('categories', {}).get('name', 'Uncategorized')
             return jsonify(data)
         except Exception as e:
-            print("Supabase error, using mock data:", e)
+            logger.error(f"Supabase error in get_drinks: {e}")
 
+    # Fallback to mock
     filtered = mock_drinks
     if category:
         filtered = [d for d in filtered if d['category_name'].lower() == category.lower()]
@@ -99,12 +104,11 @@ def get_categories():
     if supabase:
         try:
             data = supabase.table('categories').select('*').execute().data
-            # only categories that have drinks
             drink_cat_ids = set(d['category_id'] for d in mock_drinks)
             filtered = [c for c in data if c['id'] in drink_cat_ids]
             return jsonify(filtered)
         except Exception as e:
-            print("Supabase error, using mock categories:", e)
+            logger.error(f"Supabase error in get_categories: {e}")
     drink_cat_ids = set(d['category_id'] for d in mock_drinks)
     filtered = [c for c in mock_categories if c['id'] in drink_cat_ids]
     return jsonify(filtered)
@@ -131,7 +135,7 @@ def admin_logout():
     session.clear()
     return jsonify({'success': True})
 
-# ---------- File upload: Supabase Storage with local fallback ----------
+# ---------- File upload (Supabase only) ----------
 @app.route('/admin/upload-image', methods=['POST'])
 def upload_image():
     if not admin_required():
@@ -143,14 +147,13 @@ def upload_image():
         return jsonify({'error': 'No file selected'}), 400
 
     if not supabase:
-        return jsonify({'error': 'Supabase not configured'}), 500
+        return jsonify({'error': 'Supabase not configured – upload disabled'}), 500
 
     ext = file.filename.rsplit('.', 1)[1].lower() if '.' in file.filename else ''
     unique_name = f"{uuid.uuid4()}.{ext}"
     file_content = file.read()
 
     try:
-        # Upload to Supabase Storage
         supabase.storage.from_('drink-images').upload(
             unique_name,
             file_content,
@@ -159,23 +162,14 @@ def upload_image():
         public_url = supabase.storage.from_('drink-images').get_public_url(unique_name)
         return jsonify({'url': public_url})
     except Exception as e:
-        print("Supabase upload failed:", e)
+        logger.error(f"Upload failed: {e}")
         return jsonify({'error': str(e)}), 500
-    
-# ---------- Admin CRUD (unchanged) ----------
+
+# ---------- Admin CRUD (mock only – change to Supabase later) ----------
 @app.route('/admin/drinks', methods=['GET'])
 def admin_get_drinks():
     if not admin_required():
         return jsonify({'error': 'Unauthorized'}), 401
-    if supabase:
-        try:
-            response = supabase.table('drinks').select('*, categories(name)').execute()
-            drinks = response.data
-            for d in drinks:
-                d['category_name'] = d.pop('categories', {}).get('name', 'Uncategorized')
-            return jsonify(drinks)
-        except Exception as e:
-            print("Supabase error in admin get drinks:", e)
     return jsonify(mock_drinks)
 
 @app.route('/admin/drinks', methods=['POST'])
@@ -208,13 +202,6 @@ def admin_add_drink():
     }
     mock_drinks.append(new_drink)
     next_drink_id += 1
-
-    if supabase:
-        try:
-            result = supabase.table('drinks').insert(data).execute()
-            return jsonify(result.data[0]), 201
-        except Exception as e:
-            print("Supabase insert failed, but mock added:", e)
     return jsonify(new_drink), 201
 
 @app.route('/admin/drinks/<int:drink_id>', methods=['PUT'])
@@ -230,12 +217,6 @@ def admin_edit_drink(drink_id):
                     d['category_name'] = c['name']
                     break
             break
-    if supabase:
-        try:
-            result = supabase.table('drinks').update(data).eq('id', drink_id).execute()
-            return jsonify(result.data[0])
-        except Exception as e:
-            print("Supabase update failed, but mock updated:", e)
     return jsonify({"id": drink_id, **data}), 200
 
 @app.route('/admin/drinks/<int:drink_id>', methods=['DELETE'])
@@ -244,23 +225,12 @@ def admin_delete_drink(drink_id):
         return jsonify({'error': 'Unauthorized'}), 401
     global mock_drinks
     mock_drinks = [d for d in mock_drinks if d['id'] != drink_id]
-    if supabase:
-        try:
-            supabase.table('drinks').delete().eq('id', drink_id).execute()
-        except Exception as e:
-            print("Supabase delete failed, but mock deleted:", e)
     return jsonify({'success': True})
 
 @app.route('/admin/categories', methods=['GET'])
 def admin_get_categories():
     if not admin_required():
         return jsonify({'error': 'Unauthorized'}), 401
-    if supabase:
-        try:
-            response = supabase.table('categories').select('*').execute()
-            return jsonify(response.data)
-        except Exception as e:
-            print("Supabase error in admin get categories:", e)
     return jsonify(mock_categories)
 
 @app.route('/admin/categories', methods=['POST'])
@@ -274,12 +244,6 @@ def admin_add_category():
     new_cat = {"id": next_cat_id, "name": data['name']}
     mock_categories.append(new_cat)
     next_cat_id += 1
-    if supabase:
-        try:
-            result = supabase.table('categories').insert(data).execute()
-            return jsonify(result.data[0]), 201
-        except Exception as e:
-            print("Supabase insert category failed, but mock added:", e)
     return jsonify(new_cat), 201
 
 @app.route('/admin/categories/<int:cat_id>', methods=['PUT'])
@@ -291,12 +255,6 @@ def admin_edit_category(cat_id):
         if c['id'] == cat_id:
             c.update(data)
             break
-    if supabase:
-        try:
-            result = supabase.table('categories').update(data).eq('id', cat_id).execute()
-            return jsonify(result.data[0])
-        except Exception as e:
-            print("Supabase update category failed, but mock updated:", e)
     return jsonify({"id": cat_id, **data}), 200
 
 @app.route('/admin/categories/<int:cat_id>', methods=['DELETE'])
@@ -305,11 +263,6 @@ def admin_delete_category(cat_id):
         return jsonify({'error': 'Unauthorized'}), 401
     global mock_categories
     mock_categories = [c for c in mock_categories if c['id'] != cat_id]
-    if supabase:
-        try:
-            supabase.table('categories').delete().eq('id', cat_id).execute()
-        except Exception as e:
-            print("Supabase delete category failed, but mock deleted:", e)
     return jsonify({'success': True})
 
 if __name__ == '__main__':

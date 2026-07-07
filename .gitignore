@@ -2,4 +2,5 @@
 __pycache__/
 venv/
 *.pyc
-static/uploads/
+static/uploads/   # local uploads – you're using Supabase, so ignore this
+.DS_Store
