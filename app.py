@@ -30,7 +30,6 @@ if SUPABASE_URL and SUPABASE_KEY:
 ADMIN_PASSWORD = os.getenv('ADMIN_PASSWORD', 'tamasha2025')
 INACTIVITY_TIMEOUT = 300  # 5 minutes
 
-# ---------- Helper functions ----------
 def admin_required():
     if 'admin' not in session:
         return False
@@ -43,16 +42,6 @@ def admin_required():
     session['last_activity'] = datetime.now().isoformat()
     return True
 
-def get_category_name(category_id):
-    if supabase:
-        try:
-            result = supabase.table('categories').select('name').eq('id', category_id).execute()
-            if result.data:
-                return result.data[0]['name']
-        except Exception as e:
-            logger.error(f"Error getting category name: {e}")
-    return "Uncategorized"
-
 # ---------- Public routes ----------
 @app.route('/')
 def index():
@@ -64,37 +53,47 @@ def get_drinks():
     category = request.args.get('category', '').strip()
 
     if not supabase:
-        return jsonify([]), 500
+        return jsonify([]), 200  # return empty, not error
 
     try:
+        # Start building the query
         query = supabase.table('drinks').select('*, categories(name)')
+
+        # If category is provided, find its ID first
         if category:
-            query = query.eq('categories.name', category)
+            cat_result = supabase.table('categories').select('id').eq('name', category).execute()
+            if cat_result.data:
+                cat_id = cat_result.data[0]['id']
+                query = query.eq('category_id', cat_id)
+            else:
+                # No such category – return empty results
+                return jsonify([]), 200
+
         if search:
             query = query.or_(f"name.ilike.%{search}%, description.ilike.%{search}%")
+
         data = query.execute().data
         for d in data:
             d['category_name'] = d.pop('categories', {}).get('name', 'Uncategorized')
         return jsonify(data)
     except Exception as e:
         logger.error(f"Supabase error in get_drinks: {e}")
-        return jsonify([]), 500
+        return jsonify([]), 200  # Always return empty list to avoid frontend error
 
 @app.route('/api/categories')
 def get_categories():
     if not supabase:
-        return jsonify([]), 500
+        return jsonify([]), 200
     try:
         # Only categories that have drinks
         data = supabase.table('categories').select('*').execute().data
-        # Get drink category IDs
         drinks = supabase.table('drinks').select('category_id').execute().data
         cat_ids = set(d['category_id'] for d in drinks if d['category_id'])
         filtered = [c for c in data if c['id'] in cat_ids]
         return jsonify(filtered)
     except Exception as e:
         logger.error(f"Supabase error in get_categories: {e}")
-        return jsonify([]), 500
+        return jsonify([]), 200
 
 # ---------- Admin routes ----------
 @app.route('/admin')
@@ -118,7 +117,7 @@ def admin_logout():
     session.clear()
     return jsonify({'success': True})
 
-# ---------- File upload (unchanged) ----------
+# ---------- File upload ----------
 @app.route('/admin/upload-image', methods=['POST'])
 def upload_image():
     if not admin_required():
@@ -177,7 +176,6 @@ def admin_add_drink():
     if not all(k in data for k in required):
         return jsonify({'error': 'Missing fields'}), 400
 
-    # If image_url is empty, set placeholder
     if not data['image_url'] or data['image_url'].strip() == '':
         data['image_url'] = f"https://via.placeholder.com/400x300/1a120e/d4af37?text={data['name'][:10]}"
 
@@ -196,7 +194,6 @@ def admin_edit_drink(drink_id):
         return jsonify({'error': 'Supabase not configured'}), 500
 
     data = request.get_json()
-    # Remove any fields that shouldn't be updated (like id)
     try:
         result = supabase.table('drinks').update(data).eq('id', drink_id).execute()
         if result.data:
@@ -215,7 +212,6 @@ def admin_delete_drink(drink_id):
         return jsonify({'error': 'Supabase not configured'}), 500
 
     try:
-        # First delete the drink
         supabase.table('drinks').delete().eq('id', drink_id).execute()
         return jsonify({'success': True})
     except Exception as e:
@@ -280,8 +276,6 @@ def admin_delete_category(cat_id):
         return jsonify({'error': 'Supabase not configured'}), 500
 
     try:
-        # Optional: set category_id to NULL for drinks before deleting
-        # supabase.table('drinks').update({'category_id': None}).eq('category_id', cat_id).execute()
         supabase.table('categories').delete().eq('id', cat_id).execute()
         return jsonify({'success': True})
     except Exception as e:
