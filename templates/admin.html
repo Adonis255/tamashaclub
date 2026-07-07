@@ -10,7 +10,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" />
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}" />
     <style>
-        /* Modal styles */
+        /* Modal styles (unchanged) */
         .modal {
             display: none;
             position: fixed;
@@ -107,7 +107,7 @@
                 <button id="logoutBtn" class="logout-btn"><i class="fas fa-sign-out-alt"></i> Logout</button>
             </div>
 
-            <!-- Add Drink Form (inline) -->
+            <!-- Add Drink Form -->
             <div class="admin-form card">
                 <h3 id="formTitle">Add New Drink</h3>
                 <form id="drinkForm">
@@ -167,7 +167,7 @@
         </div>
     </div>
 
-    <!-- ====== EDIT MODAL with file upload ====== -->
+    <!-- Edit Modal -->
     <div id="editModal" class="modal">
         <div class="modal-content">
             <span class="modal-close" id="modalClose">&times;</span>
@@ -216,9 +216,8 @@
     </div>
 
     <script>
-        // ------ All logic inline - no external admin.js needed ------
         document.addEventListener('DOMContentLoaded', function() {
-            // DOM refs
+            // ---------- DOM refs ----------
             const loginSection = document.getElementById('loginSection');
             const dashboardSection = document.getElementById('dashboardSection');
             const loginBtn = document.getElementById('loginBtn');
@@ -242,7 +241,6 @@
             const newCategoryName = document.getElementById('newCategoryName');
             const addCategoryBtn = document.getElementById('addCategoryBtn');
 
-            // Modal elements
             const modal = document.getElementById('editModal');
             const modalClose = document.getElementById('modalClose');
             const modalCancelBtn = document.getElementById('modalCancelBtn');
@@ -252,7 +250,6 @@
             const editDescription = document.getElementById('editDescription');
             const editImageUrl = document.getElementById('editImageUrl');
             const editCategory = document.getElementById('editCategory');
-            const editSubmitBtn = document.getElementById('editSubmitBtn');
             const modalTitle = document.getElementById('modalTitle');
             const editImageFile = document.getElementById('editImageFile');
 
@@ -317,13 +314,23 @@
                         </td>
                     </tr>
                 `).join('');
-                document.querySelectorAll('.edit-btn').forEach(btn => {
-                    btn.addEventListener('click', () => openEditModal(btn.dataset.id));
-                });
-                document.querySelectorAll('.delete-btn').forEach(btn => {
-                    btn.addEventListener('click', () => deleteDrink(btn.dataset.id));
-                });
+                // No need to attach listeners individually – we'll use event delegation on the table body.
+                // But we keep the buttons with data-id attributes.
             }
+
+            // ----- EVENT DELEGATION for buttons inside the table body -----
+            // This ensures that dynamically added buttons work without re-attaching listeners.
+            drinksTableBody.addEventListener('click', function(e) {
+                const target = e.target.closest('button');
+                if (!target) return;
+                if (target.classList.contains('delete-btn')) {
+                    const id = target.dataset.id;
+                    if (id) deleteDrink(parseInt(id));
+                } else if (target.classList.contains('edit-btn')) {
+                    const id = target.dataset.id;
+                    if (id) openEditModal(parseInt(id));
+                }
+            });
 
             // ---------- Load Categories for Select ----------
             async function loadCategoriesForSelect() {
@@ -332,7 +339,6 @@
                     const cats = await res.json();
                     const select = document.getElementById('drinkCategory');
                     select.innerHTML = cats.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
-                    // also for modal
                     const editSelect = document.getElementById('editCategory');
                     editSelect.innerHTML = cats.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
                 } catch (err) { console.error(err); }
@@ -382,7 +388,7 @@
                     if (res.ok) {
                         resetForm();
                         loadDrinks();
-                        loadCategoryList(); // update categories if needed
+                        loadCategoryList();
                     } else {
                         alert('Failed to save drink.');
                     }
@@ -408,16 +414,21 @@
 
             // ---------- Delete Drink ----------
             async function deleteDrink(id) {
-                if (!confirm('Delete this drink?')) return;
+                if (!confirm('Delete this drink permanently?')) return;
                 try {
                     const res = await fetch(`/admin/drinks/${id}`, { method: 'DELETE' });
                     if (res.ok) {
+                        // Refresh the list
                         loadDrinks();
-                        loadCategoryList(); // update categories (if empty categories removed)
+                        loadCategoryList();
+                        alert('Drink deleted successfully.');
                     } else {
-                        alert('Delete failed.');
+                        const err = await res.json();
+                        alert('Delete failed: ' + (err.error || 'Unknown error'));
                     }
-                } catch (err) { alert('Error deleting.'); }
+                } catch (err) {
+                    alert('Error deleting: ' + err.message);
+                }
             }
 
             // ---------- Modal Edit ----------
@@ -435,7 +446,6 @@
                             editCategory.value = d.category_id;
                             modalTitle.textContent = `Edit "${d.name}"`;
                             modal.style.display = 'flex';
-                            // Clear file input
                             editImageFile.value = '';
                         }
                     });
@@ -493,7 +503,6 @@
                     if (res.ok) {
                         newCategoryName.value = '';
                         loadCategoryList();
-                        // refresh drink categories in selects
                         loadCategoriesForSelect();
                     } else {
                         alert('Failed to add category.');
@@ -507,7 +516,7 @@
                     const res = await fetch(`/admin/categories/${id}`, { method: 'DELETE' });
                     if (res.ok) {
                         loadCategoryList();
-                        loadDrinks(); // refresh drinks table (category names may change)
+                        loadDrinks();
                         loadCategoriesForSelect();
                     } else {
                         alert('Failed to delete category.');
@@ -567,7 +576,7 @@
                 }
             });
 
-            // ---------- Check login status from template ----------
+            // ---------- Auto login if session active ----------
             const loggedIn = {{ logged_in|tojson }};
             if (loggedIn) {
                 loginSection.style.display = 'none';
